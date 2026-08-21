@@ -18,6 +18,25 @@ def configurar_banco_emprestimos():
     conexao.commit()
     conexao.close()
 
+# ==========================================
+# NOVA TRAVA DE SEGURANÇA
+# ==========================================
+def livro_esta_emprestado(id_livro):
+    conexao = sqlite3.connect("biblioteca.db")
+    cursor = conexao.cursor()
+    
+    # Tenta procurar esse livro específico na gaveta de empréstimos
+    cursor.execute("SELECT id FROM emprestimos WHERE id_livro = ?", (id_livro,))
+    
+    # O 'fetchone' pega apenas o 1º resultado que encontrar (ou retorna Vazio/None)
+    resultado = cursor.fetchone() 
+    conexao.close()
+    
+    if resultado == None:
+        return False # O livro NÃO está lá, pode emprestar!
+    else:
+        return True  # O livro ESTÁ lá, bloqueie!
+
 def realizar_emprestimo(id_livro, nome_aluno):
     conexao = sqlite3.connect("biblioteca.db")
     cursor = conexao.cursor()

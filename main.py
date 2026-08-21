@@ -72,15 +72,21 @@ while True:
     # ==========================================
     elif opcao == "6":
         id_livro = input("\nDigite o ID do livro que será emprestado: ").strip()
+        
         if not id_livro.isdigit():
             print("❌ ERRO: O ID precisa ser um número!")
         else:
-            nome_aluno = input("Nome do aluno que vai pegar o livro: ").strip()
-            if nome_aluno == "":
-                print("❌ ERRO: O nome do aluno é obrigatório!")
+            # AQUI ENTRA A NOSSA TRAVA DE SEGURANÇA!
+            if emprestimos.livro_esta_emprestado(id_livro) == True:
+                print("❌ ERRO: Operação bloqueada! Este livro já está emprestado para outra pessoa.")
             else:
-                emprestimos.realizar_emprestimo(id_livro, nome_aluno)
-                print(f"✅ Livro emprestado com sucesso para {nome_aluno}.")
+                # Só pede o nome do aluno se o livro estiver livre
+                nome_aluno = input("Nome do aluno que vai pegar o livro: ").strip()
+                if nome_aluno == "":
+                    print("❌ ERRO: O nome do aluno é obrigatório!")
+                else:
+                    emprestimos.realizar_emprestimo(id_livro, nome_aluno)
+                    print(f"✅ Livro emprestado com sucesso para {nome_aluno}.")
                 
     elif opcao == "7":
         id_devolucao = input("\nDigite o ID do livro que está sendo devolvido: ").strip()
