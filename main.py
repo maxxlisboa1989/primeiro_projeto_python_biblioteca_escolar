@@ -9,14 +9,20 @@ while True:
     print("5. Excluir um Livro")
     print("6. Sair")
     
-    opcao = input("Escolha uma opção: ")
+    # O .strip() remove espaços vazios que o usuário digitar sem querer
+    opcao = input("Escolha uma opção: ").strip()
     
     if opcao == "1":
-        nome = input("Nome do livro: ")
-        escritor = input("Autor: ")
-        livros.cadastrar_livro(nome, escritor)
-        print("Sucesso! Livro salvo no banco de dados.")
+        nome = input("Nome do livro: ").strip()
+        escritor = input("Autor: ").strip()
         
+        # TRATAMENTO DE ERRO: Impede cadastro em branco
+        if nome == "" or escritor == "":
+            print("❌ ERRO: O título e o autor não podem ficar em branco!")
+        else:
+            livros.cadastrar_livro(nome, escritor)
+            print("✅ Sucesso! Livro salvo no banco de dados.")
+            
     elif opcao == "2":
         print("\n--- Todos os Livros ---")
         lista = livros.listar_livros() 
@@ -25,41 +31,52 @@ while True:
             print("A sua biblioteca ainda está vazia.")
         else:
             for livro in lista:
-                # Mudança: Adicionamos o ID na tela para o usuário ver
                 print(f"ID: {livro['id']} | Livro: {livro['titulo']} - Autor: {livro['autor']}")
                 
     elif opcao == "3":
-        pesquisa = input("\nDigite o nome do livro para pesquisar: ")
-        resultados = livros.pesquisar_livro(pesquisa)
+        # Mudamos a frase para avisar o usuário do novo superpoder da busca
+        pesquisa = input("\nDigite parte do título OU o nome do autor: ").strip()
         
-        if len(resultados) == 0:
-            print("Nenhum livro encontrado com esse nome.")
+        # TRATAMENTO DE ERRO: Impede pesquisa em branco
+        if pesquisa == "":
+            print("❌ ERRO: Você precisa digitar algo para pesquisar!")
         else:
-            print("\n--- Resultados da Pesquisa ---")
-            for livro in resultados:
-                # Mudança: Adicionamos o ID na tela
-                print(f"ID: {livro['id']} | Livro: {livro['titulo']} - Autor: {livro['autor']}")
+            resultados = livros.pesquisar_livro(pesquisa)
+            if len(resultados) == 0:
+                print("Nenhum livro encontrado com esse termo.")
+            else:
+                print("\n--- Resultados da Pesquisa ---")
+                for livro in resultados:
+0                    print(f"ID: {livro['id']} | Livro: {livro['titulo']} - Autor: {livro['autor']}")
                 
-    # ==========================
-    # AS NOVAS OPÇÕES DO MENU
-    # ==========================
     elif opcao == "4":
-        id_editar = input("\nDigite o ID numérico do livro que deseja editar: ")
-        novo_nome = input("Digite o novo título correto: ")
-        novo_escritor = input("Digite o novo autor correto: ")
-        # Entrega as três caixinhas para o cozinheiro
-        livros.editar_livro(id_editar, novo_nome, novo_escritor)
-        print("Sucesso! As informações foram atualizadas.")
+        nome_autor_editar = input("\nDigite o nome ou autor do livro que deseja editar: ").strip()
+        
+        # TRATAMENTO DE ERRO: Garante que o usuário digitou um número
+        if not nome_autor_editar.strip():
+            print("❌ ERRO: O Nome ou Autor precisa ser texto!")
+        else:
+            novo_nome = input("Digite o novo título: ").strip()
+            novo_escritor = input("Digite o novo autor: ").strip()
+            
+            if novo_nome == "" or novo_escritor == "":
+                print("❌ ERRO: O título e o autor não podem ficar em branco!")
+            else:
+                livros.editar_livro(novo_nome, novo_escritor)
+                print("✅ Sucesso! As informações foram atualizadas.")
 
     elif opcao == "5":
-        id_excluir = input("\nDigite o ID numérico do livro que deseja APAGAR: ")
-        # Entrega a caixinha do ID para o cozinheiro
-        livros.excluir_livro(id_excluir)
-        print("Sucesso! O livro foi apagado para sempre do banco de dados.")
+        id_excluir = input("\nDigite o ID numérico do livro que deseja APAGAR: ").strip()
+        
+        if not id_excluir.isdigit():
+            print("❌ ERRO: O ID precisa ser um número!")
+        else:
+            livros.excluir_livro(id_excluir)
+            print("✅ Sucesso! O livro foi apagado.")
                 
     elif opcao == "6":
         print("Fechando o sistema. Até logo!")
         break
         
     else:
-        print("Opção inválida! Tente novamente.")
+        print("❌ Opção inválida! Tente novamente.")

@@ -36,13 +36,26 @@ def listar_livros():
         
     return lista_formatada
 
-def pesquisar_livro(titulo_pesquisa):
+# 4. Pesquisar um livro específico (Por Título OU Autor)
+def pesquisar_livro(termo_pesquisa):
     conexao = sqlite3.connect("biblioteca.db")
     cursor = conexao.cursor()
-    # Também pedimos o 'id' aqui
-    cursor.execute("SELECT id, titulo, autor FROM livros WHERE titulo LIKE ?", ('%' + titulo_pesquisa + '%',))
+    
+    # Colocamos o % antes e depois para achar a palavra em qualquer parte do texto
+    busca = '%' + termo_pesquisa + '%'
+    
+    # Usamos o OR para buscar nas duas colunas. 
+    # Como temos dois '?', precisamos passar a 'busca' duas vezes no final!
+    cursor.execute("SELECT id, titulo, autor FROM livros WHERE titulo LIKE ? OR autor LIKE ?", (busca, busca))
+    
     livros_encontrados = cursor.fetchall()
     conexao.close()
+    
+    lista_formatada = []
+    for livro in livros_encontrados:
+        lista_formatada.append({"id": livro[0], "titulo": livro[1], "autor": livro[2]})
+        
+    return lista_formatada
     
     lista_formatada = []
     for livro in livros_encontrados:
