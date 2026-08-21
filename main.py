@@ -1,4 +1,6 @@
 import livros
+import tkinter
+
 
 while True:
     print("\n=== MENU DA BIBLIOTECA ===")
@@ -17,7 +19,7 @@ while True:
 
     elif opcao == "2":
         print("\n--- Todos os Livros ---")
-        livros = listar_livros()  # Pede a lista para o livros.py
+        lista = livros.listar_livros()   # Pede a lista para o livros.py
 
         if len(lista) == 0:
             print("A sua biblioteca ainda está vazia.")
