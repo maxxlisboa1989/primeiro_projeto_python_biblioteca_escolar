@@ -1,16 +1,19 @@
 import sqlite3
-from datetime import date, timedelta  # Ferramentas de tempo do Python!
+from datetime import date, timedelta
 
 def configurar_banco_emprestimos():
     conexao = sqlite3.connect("biblioteca.db")
     cursor = conexao.cursor()
     
-    # ATUALIZADO: Adicionamos as colunas de data_saida e data_entrega
+    # MÁGICA: Apaga SOMENTE a gaveta de empréstimos antiga para criar a nova!
+    cursor.execute("DROP TABLE IF EXISTS emprestimos")
+    
+    # Cria a nova tabela usando id_aluno ao invés de nome_aluno
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS emprestimos (
+        CREATE TABLE emprestimos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             id_livro INTEGER NOT NULL,
-            nome_aluno TEXT NOT NULL,
+            id_aluno INTEGER NOT NULL,
             data_saida TEXT NOT NULL,
             data_entrega TEXT NOT NULL
         )
@@ -18,44 +21,16 @@ def configurar_banco_emprestimos():
     conexao.commit()
     conexao.close()
 
-# ==========================================
-# NOVA TRAVA DE SEGURANÇA
-# ==========================================
-def livro_esta_emprestado(id_livro):
+def realizar_emprestimo(id_livro, id_aluno):
     conexao = sqlite3.connect("biblioteca.db")
     cursor = conexao.cursor()
-    
-    # Tenta procurar esse livro específico na gaveta de empréstimos
-    cursor.execute("SELECT id FROM emprestimos WHERE id_livro = ?", (id_livro,))
-    
-    # O 'fetchone' pega apenas o 1º resultado que encontrar (ou retorna Vazio/None)
-    resultado = cursor.fetchone() 
-    conexao.close()
-    
-    if resultado == None:
-        return False # O livro NÃO está lá, pode emprestar!
-    else:
-        return True  # O livro ESTÁ lá, bloqueie!
-
-def realizar_emprestimo(id_livro, nome_aluno):
-    conexao = sqlite3.connect("biblioteca.db")
-    cursor = conexao.cursor()
-    
-    # 1. Pega a data exata de hoje
     hoje = date.today()
-    
-    # 2. Calcula a data de entrega (Hoje + 7 dias)
     prazo = hoje + timedelta(days=7)
     
-    # 3. Transforma a data no padrão brasileiro (DD/MM/AAAA)
-    hoje_formatado = hoje.strftime("%d/%m/%Y")
-    prazo_formatado = prazo.strftime("%d/%m/%Y")
-    
-    # Inserimos as duas datas novas no banco
     cursor.execute('''
-        INSERT INTO emprestimos (id_livro, nome_aluno, data_saida, data_entrega) 
+        INSERT INTO emprestimos (id_livro, id_aluno, data_saida, data_entrega) 
         VALUES (?, ?, ?, ?)
-    ''', (id_livro, nome_aluno, hoje_formatado, prazo_formatado))
+    ''', (id_livro, id_aluno, hoje.strftime("%d/%m/%Y"), prazo.strftime("%d/%m/%Y")))
     
     conexao.commit()
     conexao.close()
@@ -67,16 +42,25 @@ def devolver_livro(id_livro):
     conexao.commit()
     conexao.close()
 
+def livro_esta_emprestado(id_livro):
+    conexao = sqlite3.connect("biblioteca.db")
+    cursor = conexao.cursor()
+    cursor.execute("SELECT id FROM emprestimos WHERE id_livro = ?", (id_livro,))
+    resultado = cursor.fetchone() 
+    conexao.close()
+    return resultado is not None
+
 def listar_emprestados():
     conexao = sqlite3.connect("biblioteca.db")
     cursor = conexao.cursor()
     
-    # ATUALIZADO: Puxando as novas datas na busca
+    # O DUPLO JOIN: Junta Empréstimos + Livros + Alunos de uma vez só!
     cursor.execute('''
-        SELECT emprestimos.id_livro, livros.titulo, emprestimos.nome_aluno, 
+        SELECT emprestimos.id_livro, livros.titulo, alunos.nome, alunos.serie, 
                emprestimos.data_saida, emprestimos.data_entrega
         FROM emprestimos
         JOIN livros ON emprestimos.id_livro = livros.id
+        JOIN alunos ON emprestimos.id_aluno = alunos.id
     ''')
     
     resultados = cursor.fetchall()
@@ -88,11 +72,11 @@ def listar_emprestados():
             "id_livro": linha[0], 
             "titulo": linha[1], 
             "aluno": linha[2],
-            "data_saida": linha[3],  # Pegando a data de hoje do banco
-            "data_entrega": linha[4] # Pegando a data do prazo do banco
+            "serie": linha[3], # Agora a série vem direto do banco!
+            "data_saida": linha[4],
+            "data_entrega": linha[5] 
         })
         
     return lista_formatada
 
-# Roda a configuração
 configurar_banco_emprestimos()
