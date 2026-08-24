@@ -1,0 +1,10 @@
+# Ignorar o cofre de senhas da nuvem
+.env
+
+# Ignorar o banco de dados antigo local
+biblioteca.db
+
+# Ignorar lixos de sistema do Python
+__pycache__/
+*.pyc
+.venv/

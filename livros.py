@@ -1,11 +1,19 @@
-import sqlite3
+import os
+import psycopg2
+from dotenv import load_dotenv
 
-def configurar_banco():
-    conexao = sqlite3.connect("biblioteca.db")
+load_dotenv()
+url_do_banco = os.getenv("DATABASE_URL")
+
+def conectar():
+    return psycopg2.connect(url_do_banco)
+
+def configurar_banco_livros():
+    conexao = conectar()
     cursor = conexao.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS livros (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             titulo TEXT NOT NULL,
             autor TEXT NOT NULL
         )
@@ -14,73 +22,50 @@ def configurar_banco():
     conexao.close()
 
 def cadastrar_livro(titulo, autor):
-    conexao = sqlite3.connect("biblioteca.db")
+    conexao = conectar()
     cursor = conexao.cursor()
-    cursor.execute("INSERT INTO livros (titulo, autor) VALUES (?, ?)", (titulo, autor))
+    cursor.execute("INSERT INTO livros (titulo, autor) VALUES (%s, %s)", (titulo, autor))
     conexao.commit()
     conexao.close()
 
 def listar_livros():
-    conexao = sqlite3.connect("biblioteca.db")
+    conexao = conectar()
     cursor = conexao.cursor()
-    
-    # ATENÇÃO: Agora pedimos o 'id' junto com o titulo e o autor
-    cursor.execute("SELECT id, titulo, autor FROM livros")
-    livros_encontrados = cursor.fetchall() 
+    cursor.execute("SELECT id, titulo, autor FROM livros ORDER BY id")
+    resultados = cursor.fetchall()
     conexao.close()
     
-    lista_formatada = []
-    for livro in livros_encontrados:
-        # livro[0] agora é o id, livro[1] é o titulo, livro[2] é o autor
-        lista_formatada.append({"id": livro[0], "titulo": livro[1], "autor": livro[2]})
-        
-    return lista_formatada
+    lista = []
+    for linha in resultados:
+        lista.append({"id": linha[0], "titulo": linha[1], "autor": linha[2]})
+    return lista
 
-# 4. Pesquisar um livro específico (Por Título OU Autor)
-def pesquisar_livro(termo_pesquisa):
-    conexao = sqlite3.connect("biblioteca.db")
+def pesquisar_livro(termo):
+    conexao = conectar()
     cursor = conexao.cursor()
-    
-    # Colocamos o % antes e depois para achar a palavra em qualquer parte do texto
-    busca = '%' + termo_pesquisa + '%'
-    
-    # Usamos o OR para buscar nas duas colunas. 
-    # Como temos dois '?', precisamos passar a 'busca' duas vezes no final!
-    cursor.execute("SELECT id, titulo, autor FROM livros WHERE titulo LIKE ? OR autor LIKE ?", (busca, busca))
-    
-    livros_encontrados = cursor.fetchall()
+    termo_busca = f"%{termo}%"
+    # O ILIKE é o segredo do Postgres para ignorar maiúsculas/minúsculas!
+    cursor.execute("SELECT id, titulo, autor FROM livros WHERE titulo ILIKE %s OR autor ILIKE %s", (termo_busca, termo_busca))
+    resultados = cursor.fetchall()
     conexao.close()
     
-    lista_formatada = []
-    for livro in livros_encontrados:
-        lista_formatada.append({"id": livro[0], "titulo": livro[1], "autor": livro[2]})
-        
-    return lista_formatada
-    
-    lista_formatada = []
-    for livro in livros_encontrados:
-        lista_formatada.append({"id": livro[0], "titulo": livro[1], "autor": livro[2]})
-        
-    return lista_formatada
+    lista = []
+    for linha in resultados:
+        lista.append({"id": linha[0], "titulo": linha[1], "autor": linha[2]})
+    return lista
 
-# ==========================================
-# AS DUAS NOVAS RECEITAS DA COZINHA (UPDATE E DELETE)
-# ==========================================
-
-# 5. Editar (Update)
 def editar_livro(id_livro, novo_titulo, novo_autor):
-    conexao = sqlite3.connect("biblioteca.db")
+    conexao = conectar()
     cursor = conexao.cursor()
-    cursor.execute("UPDATE livros SET titulo = ?, autor = ? WHERE id = ?", (novo_titulo, novo_autor, id_livro))
+    cursor.execute("UPDATE livros SET titulo = %s, autor = %s WHERE id = %s", (novo_titulo, novo_autor, id_livro))
     conexao.commit()
     conexao.close()
 
-# 6. Excluir (Delete)
 def excluir_livro(id_livro):
-    conexao = sqlite3.connect("biblioteca.db")
+    conexao = conectar()
     cursor = conexao.cursor()
-    cursor.execute("DELETE FROM livros WHERE id = ?", (id_livro,))
+    cursor.execute("DELETE FROM livros WHERE id = %s", (id_livro,))
     conexao.commit()
     conexao.close()
 
-configurar_banco()
+configurar_banco_livros()
