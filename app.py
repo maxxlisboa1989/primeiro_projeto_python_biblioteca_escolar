@@ -5,6 +5,27 @@ import alunos
 import funcionarios
 import acessos  # Importa o arquivo que criamos
 
+
+
+# Criando as abas no topo do site
+aba_aluno, aba_admin, aba_acessos = st.tabs([
+    "📖 Terminal do Aluno (Autoatendimento)", 
+    "🔒 Área Restrita (Funcionário)",
+    "🚪 Controle de Acessos"
+])
+
+with aba_aluno:
+    # Todo o código do autoatendimento do aluno aqui...
+    pass
+
+with aba_admin:
+    # Todo o código da área restrita aqui...
+    pass
+
+with aba_acessos:
+    # Chama a função que criamos para gerenciar e registrar os acessos
+    acessos.exibir_pagina_acessos()
+
 st.set_page_config(page_title="Biblioteca Escolar", page_icon="📚", layout="centered")
 
 # ==========================================
