@@ -3,6 +3,7 @@ import livros
 import emprestimos
 import alunos
 import funcionarios
+import acessos  # Importa o arquivo que criamos
 
 st.set_page_config(page_title="Biblioteca Escolar", page_icon="📚", layout="centered")
 
