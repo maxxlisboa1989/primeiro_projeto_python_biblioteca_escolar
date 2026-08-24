@@ -1,138 +1,101 @@
 import streamlit as st
 import livros
 import emprestimos
-import alunos # Trazendo a secretaria para a nossa tela!
+import alunos
+import funcionarios
 
-st.set_page_config(page_title="Minha Biblioteca", page_icon="📚")
-
-st.sidebar.title("Navegação")
-
-opcoes_menu = [
-    "Ver Livros", 
-    "Pesquisar Livro",
-    "Cadastrar Livro", 
-    "Editar Livro",
-    "Excluir Livro",
-    "Emprestar Livro", 
-    "Devolver Livro", 
-    "Livros Emprestados"
-]
-menu = st.sidebar.selectbox("Escolha uma opção:", opcoes_menu)
-
-
-if menu == "Ver Livros":
-    st.title("📚 Todos os Livros")
-    lista = livros.listar_livros()
-    if len(lista) == 0:
-        st.warning("A biblioteca ainda está vazia.")
-    else:
-        st.table(lista)
-
-
-elif menu == "Pesquisar Livro":
-    st.title("🔍 Pesquisar Livro")
-    termo = st.text_input("Digite sua pesquisa:")
-    if st.button("Buscar"):
-        if termo == "":
-            st.error("❌ Digite algo para pesquisar!")
-        else:
-            resultados = livros.pesquisar_livro(termo)
-            if len(resultados) == 0:
-                st.warning("Nenhum livro encontrado.")
-            else:
-                st.table(resultados)
-
-
-elif menu == "Cadastrar Livro":
-    st.title("➕ Cadastrar Novo Livro")
-    nome = st.text_input("Título do Livro:")
-    escritor = st.text_input("Autor do Livro:")
-    if st.button("Salvar Livro"):
-        if nome == "" or escritor == "":
-            st.error("❌ O título e o autor não podem ficar em branco!")
-        else:
-            livros.cadastrar_livro(nome, escritor)
-            st.success(f"✅ O livro '{nome}' foi salvo com sucesso!")
-
-
-elif menu == "Editar Livro":
-    st.title("✏️ Editar Livro")
-    id_editar = st.text_input("ID numérico do livro:")
-    novo_nome = st.text_input("Novo título correto:")
-    novo_escritor = st.text_input("Novo autor correto:")
-    
-    if st.button("Atualizar Informações"):
-        if not id_editar.isdigit():
-            st.error("❌ O ID precisa ser um número!")
-        elif novo_nome == "" or novo_escritor == "":
-            st.error("❌ O título e o autor não podem ficar em branco!")
-        else:
-            livros.editar_livro(id_editar, novo_nome, novo_escritor)
-            st.success("✅ As informações foram atualizadas!")
-
-
-elif menu == "Excluir Livro":
-    st.title("🗑️ Excluir Livro")
-    id_excluir = st.text_input("ID numérico do livro para excluir:")
-    if st.button("Excluir Definitivamente"):
-        if not id_excluir.isdigit():
-            st.error("❌ O ID precisa ser um número!")
-        else:
-            livros.excluir_livro(id_excluir)
-            st.success("✅ O livro foi apagado com sucesso!")
-
+st.set_page_config(page_title="Biblioteca Escolar", page_icon="📚", layout="centered")
 
 # ==========================================
-# O NOVO SISTEMA DE EMPRÉSTIMO COM DROPDOWN
+# GERENCIAMENTO DE SESSÃO (MEMÓRIA)
 # ==========================================
-elif menu == "Emprestar Livro":
-    st.title("🤝 Emprestar Livro")
-    
-    # 1. Pede a lista de todos os alunos para a secretaria
-    lista_alunos = alunos.listar_alunos()
-    
-    # 2. Prepara uma lista visual para o site. Ex: "1 - Maxuel (8º Ano)"
-    opcoes_alunos = []
-    for aluno in lista_alunos:
-        opcoes_alunos.append(f"{aluno['id']} - {aluno['nome']} ({aluno['serie']})")
+if "usuario_logado" not in st.session_state:
+    st.session_state["usuario_logado"] = None
+
+# ==========================================
+# CABEÇALHO E MODO DE ACESSO
+# ==========================================
+st.title("📚 Sistema de Biblioteca Escolar")
+
+if st.session_state["usuario_logado"] is not None:
+    st.sidebar.success(f"👤 Logado como: **{st.session_state['usuario_logado']['nome']}**")
+    if st.sidebar.button("🚪 Sair (Logout)"):
+        st.session_state["usuario_logado"] = None
+        st.rerun()
+
+# Criando as duas portas de entrada via Abas
+aba_aluno, aba_funcionario = st.tabs(["🎒 Terminal do Aluno (Autoatendimento)", "🔐 Área Restrita (Funcionário)"])
+
+# ==========================================
+# ==========================================
+# ABA 1: TERMINAL DO ALUNO
+# ==========================================
+with aba_aluno:
+    st.header("🎒 Autoatendimento do Estudante")
+    st.info("Digite seu Nome ou seu ID (Matrícula) para se identificar.")
+
+    # Campo único de busca que aceita texto (nome) ou números (ID)
+    entrada_busca = st.text_input("Digite seu Nome ou ID:", key="input_busca_aluno")
+    aluno_selecionado = None
+
+    if entrada_busca:
+        todos_alunos = alunos.listar_alunos()
         
-    id_livro = st.text_input("ID numérico do livro:")
-    
-    # 3. Cria a caixa de seleção suspensa!
-    aluno_selecionado = st.selectbox("Selecione o aluno na lista:", opcoes_alunos)
-    
-    if st.button("Registrar Empréstimo"):
-        if id_livro == "":
-            st.error("❌ Preencha o ID do Livro!")
-        elif not id_livro.isdigit():
-            st.error("❌ O ID do livro precisa ser um número!")
+        # Se o usuário digitou apenas números, filtramos diretamente pelo ID exato!
+        if entrada_busca.isdigit():
+            alunos_compatíveis = [a for a in todos_alunos if str(a["id"]) == entrada_busca]
         else:
-            if emprestimos.livro_esta_emprestado(id_livro) == True:
-                st.error("❌ Operação bloqueada! Este livro já está emprestado.")
-            else:
-                # 4. Magia do Python: O split corta a frase no " - " e pega apenas o número do ID (a posição 0)
-                id_aluno_extraido = aluno_selecionado.split(" - ")[0]
-                
-                emprestimos.realizar_emprestimo(id_livro, id_aluno_extraido)
-                st.success("✅ Livro emprestado com sucesso!")
+            # Caso contrário, filtramos por parte do nome (ignorando maiúsculas/minúsculas)
+            alunos_compatíveis = [
+                a for a in todos_alunos if entrada_busca.strip().lower() in a["nome"].strip().lower()
+            ]
 
-
-elif menu == "Devolver Livro":
-    st.title("📥 Devolver Livro")
-    id_devolucao = st.text_input("ID numérico do livro:")
-    if st.button("Registrar Devolução"):
-        if not id_devolucao.isdigit():
-            st.error("❌ O ID precisa ser um número!")
+        if len(alunos_compatíveis) == 0:
+            st.warning("❌ Nenhum aluno encontrado. Verifique se digitou o nome ou ID corretamente.")
+        elif len(alunos_compatíveis) == 1:
+            # Se achou exatamente 1 aluno (por ID exato ou nome único), já seleciona direto
+            aluno_selecionado = alunos_compatíveis[0]
         else:
-            emprestimos.devolver_livro(id_devolucao)
-            st.success("✅ Livro devolvido e liberado!")
+            # Se achou vários nomes parecidos (ex: vários "João"), exibe a lista para ele escolher
+            opcoes_formatadas = []
+            mapa_alunos = {}
+            
+            for a in alunos_compatíveis:
+                texto_opcao = f"ID: {a['id']} - {a['nome']} ({a['serie']})"
+                opcoes_formatadas.append(texto_opcao)
+                mapa_alunos[texto_opcao] = a
 
+            escolha_usuario = st.selectbox("Encontramos estes registros. Selecione o seu nome:", opcoes_formatadas)
+            
+            if escolha_usuario:
+                aluno_selecionado = mapa_alunos[escolha_usuario]
 
-elif menu == "Livros Emprestados":
-    st.title("⏳ Livros Emprestados e Prazos")
-    emprestados = emprestimos.listar_emprestados()
-    if len(emprestados) == 0:
-        st.info("Nenhum livro emprestado no momento. Tudo no acervo!")
-    else:
-        # A tabela agora vai mostrar a Série automaticamente!
-        st.table(emprestados)
+    st.divider()
+
+    # SÓ MOSTRA A IDENTIFICAÇÃO E OS BOTÕES APÓS A ESCOLHA DEFINITIVA
+    if aluno_selecionado is not None:
+        st.success(f"✅ Identificado(a): **{aluno_selecionado['nome']}** | Matrícula: `{aluno_selecionado['id']}` | Turma: `{aluno_selecionado['serie']}`")
+        
+        opcao_aluno = st.radio("O que você deseja fazer?", ["Pesquisar Livro", "Registrar Meu Empréstimo"], key="rad_aluno")
+        
+        if opcao_aluno == "Pesquisar Livro":
+            termo = st.text_input("Buscar livro por título ou autor:", key="busca_aluno")
+            if st.button("Buscar Livro"):
+                res = livros.pesquisar_livro(termo)
+                if len(res) == 0:
+                    st.warning("Nenhum livro encontrado.")
+                else:
+                    st.table(res)
+
+        elif opcao_aluno == "Registrar Meu Empréstimo":
+            id_livro_emp = st.text_input("Digite o ID numérico do Livro que está pegando:", key="emp_livro_id")
+            if st.button("Confirmar Empréstimo"):
+                if not id_livro_emp.isdigit():
+                    st.error("❌ Digite um ID numérico válido para o livro.")
+                else:
+                    if emprestimos.livro_esta_emprestado(id_livro_emp):
+                        st.error("❌ Este livro já está emprestado no momento!")
+                    else:
+                        emprestimos.realizar_emprestimo(id_livro_emp, aluno_selecionado["id"])
+                        st.balloons()
+                        st.success(f"🎉 Empréstimo registrado com sucesso para {aluno_selecionado['nome']}!")
