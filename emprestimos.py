@@ -1,8 +1,3 @@
-import os
-import psycopg2
-from dotenv import load_dotenv
-from datetime import date, timedelta
-
 import psycopg2
 import streamlit as st
 
@@ -13,93 +8,62 @@ def conectar():
   )
   return psycopg2.connect(url_do_banco)
 
-load_dotenv()
-url_do_banco = os.getenv("DATABASE_URL")
-
-def conectar():
-  # URL direta do seu banco no Supabase como garantia absoluta
-  url_do_banco = (
-      "postgresql://postgres.oiumgsgudkhlltwupflv:Craibas123%40@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
-  )
-  return psycopg2.connect(url_do_banco)
 
 def configurar_banco_emprestimos():
+  try:
     conexao = conectar()
     cursor = conexao.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS emprestimos (
-            id SERIAL PRIMARY KEY,
-            id_livro INTEGER NOT NULL,
-            id_aluno INTEGER NOT NULL,
-            data_saida TEXT NOT NULL,
-            data_entrega TEXT NOT NULL
-        )
-    ''')
+    cursor.execute("""
+            CREATE TABLE IF NOT EXISTS emprestimos (
+                id SERIAL PRIMARY KEY,
+                livro_id INTEGER NOT NULL,
+                aluno_id INTEGER NOT NULL,
+                data_emprestimo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                data_devolucao TIMESTAMP
+            )
+        """)
     conexao.commit()
+    cursor.close()
     conexao.close()
+  except Exception:
+    pass
 
-def realizar_emprestimo(id_livro, id_aluno):
-    conexao = conectar()
-    cursor = conexao.cursor()
-    hoje = date.today()
-    prazo = hoje + timedelta(days=7)
-    
-    # MUDANÇA: Substituímos os 4 '?' por '%s'
-    cursor.execute('''
-        INSERT INTO emprestimos (id_livro, id_aluno, data_saida, data_entrega) 
-        VALUES (%s, %s, %s, %s)
-    ''', (id_livro, id_aluno, hoje.strftime("%d/%m/%Y"), prazo.strftime("%d/%m/%Y")))
-    
-    conexao.commit()
-    conexao.close()
 
-def devolver_livro(id_livro):
-    conexao = conectar()
-    cursor = conexao.cursor()
-    cursor.execute("DELETE FROM emprestimos WHERE id_livro = %s", (id_livro,))
-    conexao.commit()
-    conexao.close()
-
-def livro_esta_emprestado(id_livro):
-    conexao = conectar()
-    cursor = conexao.cursor()
-    cursor.execute("SELECT id FROM emprestimos WHERE id_livro = %s", (id_livro,))
-    resultado = cursor.fetchone() 
-    conexao.close()
-    return resultado is not None
-
-def listar_emprestados():
-    conexao = conectar()
-    cursor = conexao.cursor()
-    
-    # Olha a mágica: O JOIN complexo funciona perfeitamente na nuvem!
-    cursor.execute('''
-        SELECT emprestimos.id_livro, livros.titulo, alunos.nome, alunos.serie, 
-               emprestimos.data_saida, emprestimos.data_entrega
-        FROM emprestimos
-        JOIN livros ON emprestimos.id_livro = livros.id
-        JOIN alunos ON emprestimos.id_aluno = alunos.id
-    ''')
-    
-    resultados = cursor.fetchall()
-    conexao.close()
-    
-    lista_formatada = []
-    for linha in resultados:
-        lista_formatada.append({
-            "id_livro": linha[0], 
-            "titulo": linha[1], 
-            "aluno": linha[2],
-            "serie": linha[3], 
-            "data_saida": linha[4],
-            "data_entrega": linha[5] 
-        })
-        
-    return lista_formatada
-
-# Cria a tabela de empréstimos na nuvem
+# Inicializa a tabela automaticamente
 configurar_banco_emprestimos()
 
+
+def livro_esta_emprestado(livro_id):
+  conexao = conectar()
+  cursor = conexao.cursor()
+  # Usa livro_id corretamente conforme a tabela do banco
+  cursor.execute(
+      "SELECT id FROM emprestimos WHERE livro_id = %s AND data_devolucao IS"
+      " NULL",
+      (livro_id,),
+  )
+  resultado = cursor.fetchone()
+  cursor.close()
+  conexao.close()
+  return resultado is not None
+
+
+def realizar_emprestimo(livro_id, aluno_id):
+  conexao = conectar()
+  cursor = conexao.cursor()
+  # Usa livro_id e aluno_id corretamente
+  cursor.execute(
+      "INSERT INTO emprestimos (livro_id, aluno_id) VALUES (%s, %s)",
+      (livro_id, aluno_id),
+  )
+  conexao.commit()
+  cursor.close()
+  conexao.close()
+
+
+# ==========================================
+# FUNÇÃO PRINCIPAL VISUAL (CHAMADA PELO APP.PY)
+# ==========================================
 def main():
   st.subheader("🔄 Gerenciamento de Empréstimos")
   st.write("Visualize todos os empréstimos ativos e realize devoluções.")
@@ -107,7 +71,6 @@ def main():
   try:
     conexao = conectar()
     cursor = conexao.cursor()
-    # Busca empréstimos que ainda não foram devolvidos
     cursor.execute("""
             SELECT e.id, l.titulo, a.nome, a.serie, e.data_emprestimo 
             FROM emprestimos e
@@ -164,6 +127,4 @@ def main():
     else:
       st.info("Nenhum empréstimo ativo no momento.")
   except Exception as e:
-    st.info(
-        "Tabela de empréstimos em configuração ou sem registros por enquanto."
-    )
+    st.info(f"Painel de empréstimos em configuração: {e}")
