@@ -1,44 +1,27 @@
 import os
 import psycopg2
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
-url_do_banco = os.getenv("DATABASE_URL")
+
 
 def conectar():
-    return psycopg2.connect(url_do_banco)
+  url_do_banco = (
+      "postgresql://postgres.oiumgsgudkhlltwupflv:Craibas123%40@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
+  )
+  return psycopg2.connect(url_do_banco)
 
-def configurar_banco_alunos():
-    conexao = conectar()
-    cursor = conexao.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS alunos (
-            id SERIAL PRIMARY KEY,
-            nome TEXT NOT NULL,
-            serie TEXT NOT NULL
-        )
-    ''')
-    conexao.commit()
-    conexao.close()
-
-def cadastrar_aluno(nome, serie):
-    conexao = conectar()
-    cursor = conexao.cursor()
-    cursor.execute("INSERT INTO alunos (nome, serie) VALUES (%s, %s)", (nome, serie))
-    conexao.commit()
-    conexao.close()
 
 def listar_alunos():
-    conexao = conectar()
-    cursor = conexao.cursor()
-    cursor.execute("SELECT id, nome, serie FROM alunos ORDER BY id")
-    resultados = cursor.fetchall()
-    conexao.close()
-    
-    lista = []
-    for linha in resultados:
-        lista.append({"id": linha[0], "nome": linha[1], "serie": linha[2]})
-        
-    return lista
+  conexao = conectar()
+  cursor = conexao.cursor()
+  cursor.execute("SELECT id, nome, serie FROM alunos ORDER BY id DESC")
+  resultados = cursor.fetchall()
+  cursor.close()
+  conexao.close()
 
-configurar_banco_alunos()
+  lista = []
+  for linha in resultados:
+    lista.append({"id": linha[0], "nome": linha[1], "serie": linha[2]})
+  return lista
