@@ -1,0 +1,3 @@
+source .venv/bin/activate, iniciar ambiente 
+streamlit run app.py, iniciar app on line 
+quanto tiver @ ao lado de outro, troca-se por %40
