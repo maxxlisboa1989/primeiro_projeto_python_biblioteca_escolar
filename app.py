@@ -5,6 +5,26 @@ import livros
 import streamlit as st
 import visitas  # Módulo isolado de registro e relatório de presença
 
+
+
+st.markdown(
+    """
+    <style>
+    /* Oculta o botão vermelho do menu do desenvolvedor */
+    [data-testid="stCloudDeveloperAdminWarning"] {
+        display: none !important;
+    }
+    
+    /* Oculta o menu padrão do Streamlit (três pontos) e o rodapé */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
 # Configuração da página deve ser sempre a primeira chamada do Streamlit
 st.set_page_config(
     page_title="Biblioteca Escolar", page_icon="📚", layout="centered"
